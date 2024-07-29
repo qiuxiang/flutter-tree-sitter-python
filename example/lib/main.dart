@@ -54,7 +54,7 @@ class _AppState extends State<App> {
     final rootNode = treeSitter.ts_tree_root_node(tree);
     final nodeString = treeSitter.ts_node_string(rootNode);
     print(nodeString.cast<Utf8>().toDartString());
-    malloc.free(nodeString);
+    treeSitter.free(nodeString as Pointer<Void>);
     treeSitter.ts_tree_delete(tree);
     treeSitter.ts_parser_delete(parser);
   }
