@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
@@ -17,8 +16,7 @@ factorial = 1
 for i in range(2, n + 1):
     factorial *= i
 
-print(factorial)
-''';
+print(factorial)''';
 
 void main() {
   runApp(const App());
@@ -32,8 +30,7 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  late int sumResult;
-  late Future<int> sumAsyncResult;
+  var treeString = '';
 
   @override
   void initState() {
@@ -53,7 +50,9 @@ class _AppState extends State<App> {
     malloc.free(code);
     final rootNode = treeSitter.ts_tree_root_node(tree);
     final nodeString = treeSitter.ts_node_string(rootNode);
-    print(nodeString.cast<Utf8>().toDartString());
+    setState(() {
+      treeString = nodeString.cast<Utf8>().toDartString();
+    });
     treeSitter.free(nodeString as Pointer<Void>);
     treeSitter.ts_tree_delete(tree);
     treeSitter.ts_parser_delete(parser);
@@ -63,17 +62,39 @@ class _AppState extends State<App> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Native Packages'),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Source:'),
+              const SizedBox(height: 4),
+              const CodeBlock(pythonCode),
+              const SizedBox(height: 16),
+              const Text('S-Expression:'),
+              const SizedBox(height: 4),
+              CodeBlock(treeString),
+            ],
+          ),
         ),
-        body: const SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: Column(children: [
-            Text(
-              'This calls a native function through FFI that is shipped as source in the package. '
-              'The native code is built as part of the Flutter Runner build.',
-            ),
-          ]),
+      ),
+    );
+  }
+}
+
+class CodeBlock extends StatelessWidget {
+  final String code;
+  const CodeBlock(this.code, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Text(
+          code,
+          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
         ),
       ),
     );
