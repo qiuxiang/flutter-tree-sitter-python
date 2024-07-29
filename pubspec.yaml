@@ -1,10 +1,10 @@
-name: tree_sitter_python
+name: flutter_tree_sitter_python
 description: "A new Flutter FFI plugin project."
 version: 0.0.1
 homepage:
 
 environment:
-  sdk: ">=3.4.4 <4.0.0"
+  sdk: ">=3.0.0 <4.0.0"
   flutter: ">=3.3.0"
 
 dependencies:

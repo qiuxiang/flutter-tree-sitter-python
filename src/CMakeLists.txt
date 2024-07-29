@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(tree_sitter_python_library VERSION 0.0.1 LANGUAGES C)
 
-add_library(tree_sitter_python SHARED
+add_library(flutter_tree_sitter_python SHARED
   "tree_sitter_python.c"
 )
 
-target_compile_definitions(tree_sitter_python PUBLIC DART_SHARED_LIB)
+target_compile_definitions(flutter_tree_sitter_python PUBLIC DART_SHARED_LIB)

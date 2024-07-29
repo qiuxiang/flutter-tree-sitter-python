@@ -3,9 +3,9 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:tree_sitter/bindings.g.dart';
-import 'package:tree_sitter/tree_sitter.dart';
-import 'package:tree_sitter_python/tree_sitter_python.dart';
+import 'package:flutter_tree_sitter/bindings.g.dart';
+import 'package:flutter_tree_sitter/flutter_tree_sitter.dart';
+import 'package:flutter_tree_sitter_python/flutter_tree_sitter_python.dart';
 
 const pythonCode = '''
 n = int(input('Type a number, and its factorial will be printed: '))
