@@ -31,15 +31,13 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   var treeString = '';
+  final language = treeSitterPython.tree_sitter_python() as Pointer<TSLanguage>;
 
   @override
   void initState() {
     super.initState();
     final parser = treeSitter.ts_parser_new();
-    treeSitter.ts_parser_set_language(
-      parser,
-      treeSitterPython.tree_sitter_python() as Pointer<TSLanguage>,
-    );
+    treeSitter.ts_parser_set_language(parser, language);
     final code = pythonCode.toNativeUtf8().cast<Char>();
     final tree = treeSitter.ts_parser_parse_string(
       parser,
@@ -47,35 +45,46 @@ class _AppState extends State<App> {
       code,
       pythonCode.length,
     );
-    malloc.free(code);
+    free(code);
     final rootNode = treeSitter.ts_tree_root_node(tree);
-    final nodeString = treeSitter.ts_node_string(rootNode);
     setState(() {
-      treeString = nodeString.cast<Utf8>().toDartString();
+      walkTree(rootNode, 0);
     });
-    treeSitter.free(nodeString as Pointer<Void>);
     treeSitter.ts_tree_delete(tree);
     treeSitter.ts_parser_delete(parser);
+  }
+
+  void walkTree(TSNode node, int level) {
+    final count = treeSitter.ts_node_named_child_count(node);
+    if (count > 0) {
+      final typeString = treeSitter.ts_node_type(node);
+      treeString +=
+          '${'  ' * level}${typeString.cast<Utf8>().toDartString()}\n';
+      for (var i = 0; i < count; i += 1) {
+        walkTree(treeSitter.ts_node_named_child(node, i), level + 1);
+      }
+    } else {
+      final typeString = treeSitter.ts_node_type(node);
+      treeString +=
+          '${'  ' * level}${typeString.cast<Utf8>().toDartString()}\n';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        body: SingleChildScrollView(
+        body: ListView(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Source:'),
-              const SizedBox(height: 4),
-              const CodeBlock(pythonCode),
-              const SizedBox(height: 16),
-              const Text('S-Expression:'),
-              const SizedBox(height: 4),
-              CodeBlock(treeString),
-            ],
-          ),
+          children: [
+            const Text('Source:'),
+            const SizedBox(height: 4),
+            const CodeBlock(pythonCode),
+            const SizedBox(height: 16),
+            const Text('AST:'),
+            const SizedBox(height: 4),
+            CodeBlock(treeString),
+          ],
         ),
       ),
     );
