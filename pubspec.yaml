@@ -38,3 +38,7 @@ ffigen:
   headers:
     entry-points:
       - "./src/tree_sitter_python.c"
+  exclude-all-by-default: true
+  functions:
+    include:
+      - tree_sitter_python
