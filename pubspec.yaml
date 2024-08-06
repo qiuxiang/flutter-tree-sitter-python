@@ -42,3 +42,6 @@ ffigen:
   functions:
     include:
       - tree_sitter_python
+  enums:
+    include:
+      - "ts_.*"
