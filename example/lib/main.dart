@@ -43,7 +43,7 @@ class _AppState extends State<App> {
       codePtr,
       pythonCode.length,
     );
-    free(codePtr);
+    malloc.free(codePtr);
     final rootNode = treeSitter.ts_tree_root_node(tree);
     setState(() {
       walk(rootNode, 0);
