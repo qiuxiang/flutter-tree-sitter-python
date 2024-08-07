@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tree_sitter/bindings.g.dart';
+import 'package:flutter_tree_sitter/bindings.g.dart' hide Stack;
 import 'package:flutter_tree_sitter/flutter_tree_sitter.dart';
 import 'package:flutter_tree_sitter_python/flutter_tree_sitter_python.dart';
 import 'package:flutter_tree_sitter_python/highlight.dart';
@@ -28,36 +28,105 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   var treeString = '';
-  final language = treeSitterPython.tree_sitter_python() as Pointer<TSLanguage>;
-  final lines = <List<HighlightSpan>>[];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ThemeData.light();
+    return MaterialApp(
+      scrollBehavior: const ScrollBehavior(),
+      theme: theme.copyWith(
+        scrollbarTheme: theme.scrollbarTheme.copyWith(
+          thumbVisibility: const WidgetStatePropertyAll(true),
+        ),
+      ),
+      home: Scaffold(
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text('Source:'),
+            const SizedBox(height: 4),
+            CodeBlock(pythonCode, (treeString) {
+              setState(() {
+                this.treeString = treeString;
+              });
+            }),
+            const SizedBox(height: 16),
+            const Text('AST:'),
+            const SizedBox(height: 4),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(treeString, style: textStyle),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CodeBlock extends StatefulWidget {
+  final String code;
+  final ValueChanged<String> onChanged;
+  const CodeBlock(this.code, this.onChanged, {super.key});
+
+  @override
+  State<CodeBlock> createState() => _CodeBlockState();
+}
+
+class _CodeBlockState extends State<CodeBlock> {
+  var treeString = '';
+  final code = TextEditingController();
+  final parser = treeSitter.ts_parser_new();
+  var tokens = <List<HighlightSpan>>[];
+  Pointer<TSTree>? tree;
 
   @override
   void initState() {
     super.initState();
-    final parser = treeSitter.ts_parser_new();
     treeSitter.ts_parser_set_language(parser, language);
-    final codePtr = pythonCode.toNativeUtf8().cast<Char>();
-    final tree = treeSitter.ts_parser_parse_string(
+    code.text = widget.code;
+    WidgetsBinding.instance.addPostFrameCallback((_) => update());
+  }
+
+  @override
+  void dispose() {
+    if (tree != null) {
+      treeSitter.ts_tree_delete(tree!);
+    }
+    treeSitter.ts_parser_delete(parser);
+    super.dispose();
+  }
+
+  void update() {
+    if (tree != null) {
+      treeSitter.ts_tree_delete(tree!);
+    }
+
+    final codeBuf = code.text.toNativeUtf8().cast<Char>();
+    tree = treeSitter.ts_parser_parse_string(
       parser,
       nullptr,
-      codePtr,
-      pythonCode.length,
+      codeBuf,
+      code.text.length,
     );
-    malloc.free(codePtr);
-    final rootNode = treeSitter.ts_tree_root_node(tree);
+    malloc.free(codeBuf);
+
+    final rootNode = treeSitter.ts_tree_root_node(tree!);
+    treeString = '';
+    walk(rootNode, 0);
+    widget.onChanged(treeString);
+
+    final highlighter = Highlighter(
+      language,
+      highlightQuery: pythonHighlightQuery,
+    );
     setState(() {
-      walk(rootNode, 0);
-      final highlighter = Highlighter(
-        language,
-        highlightQuery: pythonHighlightQuery,
-      );
-      lines.addAll(
-        highlighter.render(pythonCode, highlighter.highlight(rootNode)),
-      );
-      highlighter.delete();
+      tokens = highlighter.render(code.text, highlighter.highlight(rootNode));
     });
-    treeSitter.ts_tree_delete(tree);
-    treeSitter.ts_parser_delete(parser);
+    highlighter.delete();
   }
 
   void walk(TSNode node, int level) {
@@ -78,70 +147,57 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = ThemeData.light();
-    return MaterialApp(
-      scrollBehavior: const ScrollBehavior(),
-      theme: theme.copyWith(
-        scrollbarTheme: theme.scrollbarTheme.copyWith(
-          thumbVisibility: const WidgetStatePropertyAll(true),
-        ),
-      ),
-      home: Scaffold(
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const Text('Source:'),
-            const SizedBox(height: 4),
-            CodeBlock(lines),
-            const SizedBox(height: 16),
-            const Text('AST:'),
-            const SizedBox(height: 4),
-            CodeBlock([
-              [HighlightSpan('', treeString)]
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class CodeBlock extends StatelessWidget {
-  final List<List<HighlightSpan>> lines;
-  const CodeBlock(this.lines, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    const textStyle = TextStyle(
-      fontFamily: 'monospace',
-      fontSize: 12,
-      color: Color(0xff657b83),
-      height: 1.5,
-    );
     return Card(
       margin: EdgeInsets.zero,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(8),
         scrollDirection: Axis.horizontal,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final line in lines)
-              RichText(
-                text: TextSpan(style: textStyle, children: [
-                  for (final span in line)
-                    TextSpan(
-                      text: span.text,
-                      style: textStyle.merge(solarizedLightTheme[span.type]),
-                    ),
-                ]),
-              )
-          ],
-        ),
+        child: Stack(children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final line in tokens)
+                  RichText(
+                    text: TextSpan(style: textStyle, children: [
+                      for (final span in line)
+                        TextSpan(
+                          text: span.text,
+                          style:
+                              textStyle.merge(solarizedLightTheme[span.type]),
+                        ),
+                    ]),
+                  )
+              ],
+            ),
+          ),
+          Positioned.fill(
+            child: TextField(
+              controller: code,
+              onChanged: (_) => update(),
+              maxLines: null,
+              decoration: const InputDecoration(
+                contentPadding: EdgeInsets.only(top: 4),
+                border: InputBorder.none,
+              ),
+              style: textStyle.copyWith(color: Colors.transparent),
+            ),
+          ),
+        ]),
       ),
     );
   }
 }
+
+final language = treeSitterPython.tree_sitter_python() as Pointer<TSLanguage>;
+const textStyle = TextStyle(
+  fontFamily: 'monospace',
+  fontSize: 12,
+  color: Color(0xff657b83),
+  height: 1.5,
+  letterSpacing: 0,
+);
 
 const solarizedLightTheme = {
   'comment': TextStyle(color: Color(0xff93a1a1)),
