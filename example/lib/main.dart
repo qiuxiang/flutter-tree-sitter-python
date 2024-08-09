@@ -1,10 +1,8 @@
-import 'dart:ffi';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tree_sitter/bindings.g.dart' hide Stack;
-import 'package:flutter_tree_sitter/flutter_tree_sitter.dart';
+import 'package:flutter_tree_sitter/flutter_tree_sitter.dart' hide Stack;
 import 'package:flutter_tree_sitter_python/flutter_tree_sitter_python.dart';
 import 'package:flutter_tree_sitter_python/highlight.dart';
 
@@ -35,9 +33,7 @@ class _AppState extends State<App> {
     return MaterialApp(
       scrollBehavior: const ScrollBehavior(),
       theme: theme.copyWith(
-        scrollbarTheme: theme.scrollbarTheme.copyWith(
-          thumbVisibility: const WidgetStatePropertyAll(true),
-        ),
+        platform: TargetPlatform.iOS,
       ),
       home: Scaffold(
         body: ListView(
@@ -79,54 +75,59 @@ class CodeBlock extends StatefulWidget {
 class _CodeBlockState extends State<CodeBlock> {
   var treeString = '';
   final code = TextEditingController();
-  final parser = treeSitter.ts_parser_new();
+  final parser = TreeSitterParser();
+  final highlighter = Highlighter(
+    treeSitterPython,
+    highlightQuery: pythonHighlightQuery,
+  );
   var tokens = <List<HighlightSpan>>[];
-  Pointer<TSTree>? tree;
+  TreeSitterTree? tree;
 
   @override
   void initState() {
     super.initState();
-    treeSitter.ts_parser_set_language(parser, language);
+    parser.setLanguage(treeSitterPython);
     code.text = widget.code;
     WidgetsBinding.instance.addPostFrameCallback((_) => update());
   }
 
   @override
   void dispose() {
-    if (tree != null) {
-      treeSitter.ts_tree_delete(tree!);
-    }
-    treeSitter.ts_parser_delete(parser);
+    tree?.delete();
+    parser.delete();
+    highlighter.delete();
     super.dispose();
   }
 
   void update() {
-    if (tree != null) {
-      treeSitter.ts_tree_delete(tree!);
-    }
-
-    final codeBuf = code.text.toNativeUtf8().cast<Char>();
-    tree = treeSitter.ts_parser_parse_string(
-      parser,
-      nullptr,
-      codeBuf,
-      code.text.length,
-    );
-    malloc.free(codeBuf);
-
-    final rootNode = treeSitter.ts_tree_root_node(tree!);
+    tree?.delete();
+    tree = parser.parseString(code.text);
     treeString = '';
-    walk(rootNode, 0);
+    walk(tree!.rootNode, 0);
     widget.onChanged(treeString);
-
-    final highlighter = Highlighter(
-      language,
-      highlightQuery: pythonHighlightQuery,
-    );
     setState(() {
-      tokens = highlighter.render(code.text, highlighter.highlight(rootNode));
+      tokens = highlighter.render(
+        code.text,
+        highlighter.highlight(tree!.rootNode),
+      );
     });
-    highlighter.delete();
+    getErrors(tree!.rootNode);
+  }
+
+  void getErrors(TSNode rootNode) {
+    final query = TreeSitterQuery(treeSitterPython, '(ERROR) @error');
+    for (final capture in query.captures(rootNode)) {
+      final start = capture.node.startPoint;
+      final position = '${start.row + 1}:${start.column + 1}';
+      final s =
+          code.text.substring(capture.node.startByte, capture.node.endByte);
+      if (treeSitter.ts_node_is_missing(capture.node)) {
+        print('$position missing $s');
+      } else {
+        print('$position unexpected $s');
+      }
+    }
+    query.delete();
   }
 
   void walk(TSNode node, int level) {
@@ -190,7 +191,6 @@ class _CodeBlockState extends State<CodeBlock> {
   }
 }
 
-final language = treeSitterPython.tree_sitter_python() as Pointer<TSLanguage>;
 const textStyle = TextStyle(
   fontFamily: 'monospace',
   fontSize: 12,
@@ -209,7 +209,7 @@ const solarizedLightTheme = {
 };
 
 const pythonCode = '''
-n = int(input('Type a number, and its factorial will be printed: '))
+ = int(input('Type a number, and its factorial will be printed: '))
 
 if n < 0:
     raise ValueError('You must enter a non-negative integer')

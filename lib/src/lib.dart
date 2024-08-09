@@ -16,4 +16,4 @@ final _lib = () {
   }
   throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
 }();
-final treeSitterPython = NativeLibrary(_lib);
+final lib = NativeLibrary(_lib);

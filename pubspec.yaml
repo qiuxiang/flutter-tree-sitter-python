@@ -10,7 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  plugin_platform_interface: ^2.0.2
+  flutter_tree_sitter:
+    path: ../flutter_tree_sitter
 
 dev_dependencies:
   ffi: ^2.1.0
@@ -34,7 +35,7 @@ flutter:
         ffiPlugin: true
 
 ffigen:
-  output: "lib/bindings.g.dart"
+  output: "lib/src/bindings.g.dart"
   headers:
     entry-points:
       - "./src/tree_sitter_python.c"
