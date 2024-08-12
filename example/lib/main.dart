@@ -3,9 +3,19 @@ import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_highlight/themes/solarized-dark.dart';
 import 'package:flutter_tree_sitter/flutter_tree_sitter.dart' hide Stack;
 import 'package:flutter_tree_sitter_python/flutter_tree_sitter_python.dart';
 import 'package:flutter_tree_sitter_python/highlight.dart';
+
+const hightlightTheme = solarizedDarkTheme;
+final textStyle = TextStyle(
+  fontFamily: 'monospace',
+  fontSize: 12,
+  color: hightlightTheme['root']?.color,
+  height: 1.5,
+  letterSpacing: 0,
+);
 
 void main() {
   runApp(const App());
@@ -51,6 +61,7 @@ class _AppState extends State<App> {
             const Text('AST:'),
             const SizedBox(height: 4),
             Card(
+              color: hightlightTheme['root']?.backgroundColor,
               margin: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(8),
@@ -152,34 +163,60 @@ class _CodeBlockState extends State<CodeBlock> {
 
   @override
   Widget build(BuildContext context) {
+    final lines = code.text.split('\n');
     return Card(
+      color: hightlightTheme['root']?.backgroundColor,
       margin: EdgeInsets.zero,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(8),
-        scrollDirection: Axis.horizontal,
-        child: Stack(children: [
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(children: [
           Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: RichText(
-              text: TextSpan(style: textStyle, children: [
-                for (final span in tokens)
-                  TextSpan(
-                    text: span.text,
-                    style: textStyle.merge(solarizedLightTheme[span.type]),
-                  ),
-              ]),
+            padding: const EdgeInsets.fromLTRB(8, 0, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (var i = 0; i < lines.length; i += 1)
+                  Text('${i + 1}', style: textStyle),
+              ],
             ),
           ),
-          Positioned.fill(
-            child: TextField(
-              controller: code,
-              onChanged: (_) => update(),
-              maxLines: null,
-              decoration: const InputDecoration(
-                contentPadding: EdgeInsets.only(top: 4),
-                border: InputBorder.none,
-              ),
-              style: textStyle.copyWith(color: Colors.transparent),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Stack(children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: RichText(
+                    text: TextSpan(style: textStyle, children: [
+                      for (final token in tokens)
+                        TextSpan(
+                          text: token.text,
+                          style: textStyle.merge(hightlightTheme[token.type]),
+                        ),
+                    ]),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      textSelectionTheme: TextSelectionThemeData(
+                        selectionColor:
+                            hightlightTheme['comment']?.color?.withOpacity(0.5),
+                      ),
+                    ),
+                    child: TextField(
+                      controller: code,
+                      onChanged: (_) => update(),
+                      maxLines: null,
+                      decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.only(top: 4),
+                        border: InputBorder.none,
+                      ),
+                      style: textStyle.copyWith(color: Colors.transparent),
+                    ),
+                  ),
+                ),
+              ]),
             ),
           ),
         ]),
@@ -187,23 +224,6 @@ class _CodeBlockState extends State<CodeBlock> {
     );
   }
 }
-
-const textStyle = TextStyle(
-  fontFamily: 'monospace',
-  fontSize: 12,
-  color: Color(0xff657b83),
-  height: 1.5,
-  letterSpacing: 0,
-);
-
-const solarizedLightTheme = {
-  'comment': TextStyle(color: Color(0xff93a1a1)),
-  'keyword': TextStyle(color: Color(0xff859900)),
-  'number': TextStyle(color: Color(0xff2aa198)),
-  'string': TextStyle(color: Color(0xff2aa198)),
-  'function': TextStyle(color: Color(0xff268bd2)),
-  'variable': TextStyle(color: Color(0xffb58900)),
-};
 
 const pythonCode = '''
 n = int(input('Type a number, and its factorial will be printed: '))
