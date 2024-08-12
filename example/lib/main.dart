@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
@@ -80,7 +81,7 @@ class _CodeBlockState extends State<CodeBlock> {
     treeSitterPython,
     highlightQuery: pythonHighlightQuery,
   );
-  var tokens = <List<HighlightSpan>>[];
+  var tokens = <HighlightSpan>[];
   TreeSitterTree? tree;
 
   @override
@@ -115,16 +116,19 @@ class _CodeBlockState extends State<CodeBlock> {
   }
 
   void getErrors(TSNode rootNode) {
+    final codeBytes = utf8.encode(code.text);
     final query = TreeSitterQuery(treeSitterPython, '(ERROR) @error');
     for (final capture in query.captures(rootNode)) {
       final start = capture.node.startPoint;
       final position = '${start.row + 1}:${start.column + 1}';
-      final s =
-          code.text.substring(capture.node.startByte, capture.node.endByte);
+      final errorTokens = utf8.decode(codeBytes.sublist(
+        capture.node.startByte,
+        capture.node.endByte,
+      ));
       if (treeSitter.ts_node_is_missing(capture.node)) {
-        print('$position missing $s');
+        print('$position missing $errorTokens');
       } else {
-        print('$position unexpected $s');
+        print('$position unexpected $errorTokens');
       }
     }
     query.delete();
@@ -156,21 +160,14 @@ class _CodeBlockState extends State<CodeBlock> {
         child: Stack(children: [
           Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final line in tokens)
-                  RichText(
-                    text: TextSpan(style: textStyle, children: [
-                      for (final span in line)
-                        TextSpan(
-                          text: span.text,
-                          style:
-                              textStyle.merge(solarizedLightTheme[span.type]),
-                        ),
-                    ]),
-                  )
-              ],
+            child: RichText(
+              text: TextSpan(style: textStyle, children: [
+                for (final span in tokens)
+                  TextSpan(
+                    text: span.text,
+                    style: textStyle.merge(solarizedLightTheme[span.type]),
+                  ),
+              ]),
             ),
           ),
           Positioned.fill(
@@ -209,7 +206,7 @@ const solarizedLightTheme = {
 };
 
 const pythonCode = '''
- = int(input('Type a number, and its factorial will be printed: '))
+n = int(input('Type a number, and its factorial will be printed: '))
 
 if n < 0:
     raise ValueError('You must enter a non-negative integer')
