@@ -3,12 +3,12 @@ import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_highlight/themes/solarized-dark.dart';
+import 'package:flutter_highlight/themes/solarized-light.dart';
 import 'package:flutter_tree_sitter/flutter_tree_sitter.dart' hide Stack;
 import 'package:flutter_tree_sitter_python/flutter_tree_sitter_python.dart';
 import 'package:flutter_tree_sitter_python/highlight.dart';
 
-const hightlightTheme = solarizedDarkTheme;
+const hightlightTheme = solarizedLightTheme;
 final textStyle = TextStyle(
   fontFamily: 'monospace',
   fontSize: 12,
@@ -208,6 +208,7 @@ class _CodeBlockState extends State<CodeBlock> {
                       controller: code,
                       onChanged: (_) => update(),
                       maxLines: null,
+                      cursorColor: hightlightTheme['root']?.color,
                       decoration: const InputDecoration(
                         contentPadding: EdgeInsets.only(top: 4),
                         border: InputBorder.none,
