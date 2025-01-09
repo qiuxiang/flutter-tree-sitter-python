@@ -1,7 +1,7 @@
 name: flutter_tree_sitter_python
-description: "A new Flutter FFI plugin project."
+description: "A Flutter FFI plugin for tree-sitter-python"
 version: 0.0.1
-homepage:
+homepage: https://github.com/qiuxiang/flutter-tree-sitter-python
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -10,8 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_tree_sitter:
-    path: ../flutter_tree_sitter
+  flutter_tree_sitter: ^0.0.1
 
 dev_dependencies:
   ffi: ^2.1.0
